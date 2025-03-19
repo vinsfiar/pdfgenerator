@@ -41,8 +41,8 @@ def generate_pdf():
         # Convert HTML to PDF
         HTML(string=html_content).write_pdf(file_path)
         
-        # Build the correct URL for the generated PDF
-        pdf_url = BASE_URL + "/download/" + file_id
+        # Ensure request context is active when accessing request.host_url
+        pdf_url = f"{request.host_url}download/{file_id}"
         
         return jsonify({"message": "PDF generated", "pdf_url": pdf_url})
     except Exception as e:
