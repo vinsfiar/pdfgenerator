@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from weasyprint import HTML
 import os
 import uuid
@@ -20,12 +20,6 @@ def require_api_key(func):
         return func(*args, **kwargs)
     return wrapper
 
-# Set BASE_URL dynamically based on the environment
-if os.environ.get('FLASK_ENV') == 'development':  # Local environment
-    BASE_URL = "http://localhost:5000"
-else:  # Production environment (e.g., Render)
-    BASE_URL = request.host_url
-
 @app.route('/generate-pdf', methods=['POST'])
 @require_api_key  # Protect the route
 def generate_pdf():
@@ -41,7 +35,7 @@ def generate_pdf():
         # Convert HTML to PDF
         HTML(string=html_content).write_pdf(file_path)
         
-        # Ensure request context is active when accessing request.host_url
+        # Get request host dynamically inside the request context
         pdf_url = f"{request.host_url}download/{file_id}"
         
         return jsonify({"message": "PDF generated", "pdf_url": pdf_url})
