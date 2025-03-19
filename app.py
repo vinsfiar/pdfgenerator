@@ -1,8 +1,7 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 from weasyprint import HTML
 import os
 import uuid
-from functools import wraps  # ✅ Fix: Required for decorator
 
 app = Flask(__name__)
 
@@ -10,20 +9,22 @@ app = Flask(__name__)
 SAVE_DIR = "pdfs"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
-# Dummy API keys (Replace with database validation)
+# Dummy API keys (replace with database validation)
 API_KEYS = {"test_key_123": "FreeUser"}
 
-# Base URL for accessing files (Change "http://yourdomain.com" when deployed)
-BASE_URL = "http://localhost:5000"  # ✅ Fix: Use actual domain in production
-
 def require_api_key(func):
-    @wraps(func)  # ✅ Fix: Preserve route functionality
     def wrapper(*args, **kwargs):
         api_key = request.headers.get("X-API-KEY")
         if api_key not in API_KEYS:
             return jsonify({"error": "Invalid API key"}), 403
         return func(*args, **kwargs)
     return wrapper
+
+# Set BASE_URL dynamically based on the environment
+if os.environ.get('FLASK_ENV') == 'development':  # Local environment
+    BASE_URL = "http://localhost:5000"
+else:  # Production environment (e.g., Render)
+    BASE_URL = request.host_url
 
 @app.route('/generate-pdf', methods=['POST'])
 @require_api_key  # Protect the route
@@ -40,11 +41,10 @@ def generate_pdf():
         # Convert HTML to PDF
         HTML(string=html_content).write_pdf(file_path)
         
-        # ✅ Fix: Return full URL for downloading the PDF
-        return jsonify({
-            "message": "PDF generated",
-            "pdf_url": f"{BASE_URL}/download/{file_id}"
-        })
+        # Build the correct URL for the generated PDF
+        pdf_url = BASE_URL + "/download/" + file_id
+        
+        return jsonify({"message": "PDF generated", "pdf_url": pdf_url})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -56,5 +56,4 @@ def download_pdf(file_id):
     return jsonify({"error": "File not found"}), 404
 
 if __name__ == '__main__':
-    # ✅ Fix: Host API on all network interfaces (0.0.0.0) for production
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)
